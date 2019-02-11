@@ -2,6 +2,8 @@ module Practice1 where
 
 import Prelude hiding (Either(..))
 
+-- Defining new types
+
 -- type synonym
 type CoordSyn = (Int,Int)
 
@@ -13,7 +15,7 @@ newtype CoordNew = Coord (Int, Int)
 -- descartes product (*)
 -- unit
 
-data BoolOrInt = B Bool 
+data BoolOrInt = B Bool
                | I Int
   deriving Show
 
@@ -22,7 +24,7 @@ data BoolOrInt = B Bool
 data BoolAndInt = BI { _bool :: Bool
                      , _int  :: Int
                      }
-                | IB { _int  :: Int 
+                | IB { _int  :: Int
                      , _bool :: Bool
                      }
   deriving Show
@@ -35,30 +37,35 @@ getInt (BI _ i) = i
 getInt (IB i _) = i
 
 
-data Pair a b = Pair { _fst :: a 
+-- parameterized, product
+data Pair a b = Pair { _fst :: a
                      , _snd :: b
                      }
-  deriving Show 
+  deriving Show
 
 -- constrained instance
 instance (Eq a, Eq b) => Eq (Pair a b) where
   (==) (Pair a1 b1) (Pair a2 b2) = a1 == a2 && b1 == b2
 
-data Maybe a = Nothing 
+
+-- parameterized, unit, union
+data Maybe a = Nothing
              | Just a
   deriving Show
 
--- []  :: [a] 
+-- []  :: [a]
 -- (:) :: a -> [a] -> [a]
-data List a = Nil 
+-- parameterized, unit, union, product
+data List a = Nil
             | Cons a (List a)
   deriving (Show, Eq)
 
+-- generic representation
 data Union a b   = Left a | Right b
 data Product a b = Product a b
 data Unit        = Unit
 
-instance (Eq a, Eq b) => Eq (Union a b) where 
+instance (Eq a, Eq b) => Eq (Union a b) where
   (==) (Left x) (Left y) = x == y
   (==) (Right x) (Right y) = x == y
   (==) _ _ = False
@@ -66,10 +73,15 @@ instance (Eq a, Eq b) => Eq (Union a b) where
 instance (Eq a, Eq b) => Eq (Product a b) where
   (==) (Product a1 b1) (Product a2 b2) = a1 == a2 && b1 == b2
 
-instance Eq Unit where 
+instance Eq Unit where
   (==) x y = True
 
 newtype GList a = GL (Union Unit (Product a (GList a)))
+  deriving Eq  -- this will use the Eq instance for the underlying generic representation
+
+-- [] == [5]
+-- GL (Left Unit) == GL (Right (Product 5 (GL (Left Unit))))
+
 
 -- constrained instance
 {-
@@ -82,16 +94,16 @@ instance Eq a => Eq (List a) where
 
 
 
-data Exp = Add Exp Exp 
-         | Mul Exp Exp 
+data Exp = Add Exp Exp
+         | Mul Exp Exp
          | Atom Int
   deriving Show
 
 -- lhs, rhs :: Exp
 evalExp :: Exp -> Int
 evalExp (Atom i) = i
-evalExp (Add lhs rhs) = evalExp lhs + evalExp rhs 
-evalExp (Mul lhs rhs) = evalExp lhs * evalExp rhs 
+evalExp (Add lhs rhs) = evalExp lhs + evalExp rhs
+evalExp (Mul lhs rhs) = evalExp lhs * evalExp rhs
 
 
 data BinTree a = Leaf
