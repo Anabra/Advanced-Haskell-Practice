@@ -1,7 +1,7 @@
 Haladó Haskell
 ==============
 
-A tárgy célja, hogy bemutassa a funkcionális paradigma különböző eszközeit a Haskell nyelven keresztül. A kurzus gyakorlati jellegű, ezért nagyon erősen ajánlott a részvétel.
+A tárgy célja, hogy bemutassa a funkcionális paradigma különböző eszközeit a Haskell nyelven keresztül. A kurzus gyakorlati jellegű, ezért nagyon erősen ajánlott az órán való részvétel.
 
 Tervezett tematika
 ------------------
