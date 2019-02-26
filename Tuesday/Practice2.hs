@@ -5,46 +5,46 @@ import Data.Monoid
 import Data.Semigroup
 import Data.Foldable
 
-data Nat = Zero | Suc Nat 
+data Nat = Zero | Suc Nat
   deriving Show
 
-zero :: Nat 
-zero = Zero 
+zero :: Nat
+zero = Zero
 
-three :: Nat 
+three :: Nat
 three = Suc (Suc (Suc Zero))
 
 -- neutral element (n)
---  forall x . n ˙op˙ x = x 
---  forall x . x ˙op˙ n = x 
-addNat :: Nat -> Nat -> Nat 
+--  forall x . n ˙op˙ x = x
+--  forall x . x ˙op˙ n = x
+addNat :: Nat -> Nat -> Nat
 addNat Zero n = n
 addNat n Zero = n
-addNat (Suc n) m = Suc (n `addNat` m) 
+addNat (Suc n) m = Suc (n `addNat` m)
 
 -- (n + 1) * m = n * m + m
-mulNat :: Nat -> Nat -> Nat 
+mulNat :: Nat -> Nat -> Nat
 mulNat Zero n = Zero
 mulNat n Zero = Zero
 mulNat (Suc n) m = m `addNat` (n `mulNat` m)
 
-instance Num Nat where 
+instance Num Nat where
   (+) = addNat
   (*) = mulNat
 
   -- fromInteger :: Integer -> a (a ~ Nat)
-  fromInteger 0 = Zero 
-  fromInteger n 
+  fromInteger 0 = Zero
+  fromInteger n
     | n > 0     = Suc (fromInteger $ n-1)
-    | otherwise = error "Cannot convert negative integer to Nat" 
+    | otherwise = error "Cannot convert negative integer to Nat"
 
   abs = id
 
-  signum Zero = Zero 
+  signum Zero = Zero
   signum _    = Suc Zero
 
   -- not total
-  (-) n Zero = n 
+  (-) n Zero = n
   (-) (Suc n) (Suc m) = n - m
 
 {-
@@ -54,19 +54,19 @@ class Semigroup a where
   (<>) :: a -> a -> a
 
 class Semigroup m => Monoid m where
-  mempty :: m 
+  mempty :: m
 
 newtype Sum a     = Sum     { getSum     :: a }
 newtype Product a = Product { getProduct :: a }
 
-instance Num a => Semigroup (Sum a) where 
-  (<>) = (+)
+instance Num a => Semigroup (Sum a) where
+  (<>) (Sum lhs) (Sum rhs) = Sum (lhs + rhs)
 
-instance (Num a, Monoid) => Monoid (Sum a) where 
-  mempty = 0
+instance (Num a, Monoid) => Monoid (Sum a) where
+  mempty = Sum 0
 -}
 
-data List a = Nil | Cons a (List a) 
+data List a = Nil | Cons a (List a)
   deriving Show
 
 (+++) :: List a -> List a -> List a
@@ -74,7 +74,7 @@ data List a = Nil | Cons a (List a)
 (+++) xs Nil = xs
 (+++) (Cons x xs) ys = Cons x (xs +++ ys)
 
-instance Semigroup (List a) where 
+instance Semigroup (List a) where
   (<>) = (+++)
 
 instance Monoid (List a) where
