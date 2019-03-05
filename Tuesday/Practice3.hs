@@ -3,6 +3,7 @@ module Practice3 where
 import Prelude hiding (Either(..))
 
 import Data.List
+import Data.Function
 
 --map :: (a -> b) -> [a] -> [b]
 
@@ -58,3 +59,8 @@ maybeLookup p xs ys = case mInd of
   where 
     mInd = findIndex p xs
 -}
+
+newtype E a = E { appE :: a -> a }
+
+instance Semigroup (E a) where 
+  (<>) = E . ((.) `on` appE)
