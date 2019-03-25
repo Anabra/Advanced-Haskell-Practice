@@ -66,6 +66,9 @@ digitC = matches isDigit
 letter :: Parser Char
 letter = matches isAlpha
 
+alphaNum :: Parser Char
+alphaNum = matches isAlphaNum
+
 -- motivation for Functor instance
 digit :: Parser Int
 digit = fmap digitToInt digitC
@@ -80,9 +83,24 @@ list p = char '[' *> (((:) <$> p <*> list') <|> pure []) <* char ']' where
   list' = many (char ',' *> p)
 
 -- motivation 2 for Applicative
+token' :: String -> Parser String
+token' (c:cs) = (:) <$> char c <*> token cs
+token' []     = pure ""
+
 token :: String -> Parser String
-token (c:cs) = (:) <$> char c <*> token cs
-token []     = pure ""
+token s = lexeme (token' s)
 
 nat :: Parser Int
 nat = foldl' (\acc cur -> acc*10 + cur) 0 <$> some digit
+
+ws :: Parser ()
+ws = matches isSpace *> pure ()
+
+lexeme :: Parser a -> Parser a
+lexeme p = p <* many ws
+
+between :: String -> String -> Parser a -> Parser a
+between before after p = token before *> lexeme p <* token after
+
+parens :: Parser a -> Parser a
+parens = between "(" ")"
