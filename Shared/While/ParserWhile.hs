@@ -15,13 +15,14 @@ lit = LBool <$> bool
 
 
 identifier :: Parser String
-identifier = (:) <$> letter <*> many anyChar
+identifier = (:) <$> letter <*> many alphaNum
 
 var :: Parser Var
 var = Var <$> identifier
 
 op :: String -> Parser String
-op = token
+op s = many ws *> token s
+
 
 expr :: Parser Expr
 expr = exprNoLRec
@@ -38,3 +39,18 @@ exprNoLRec = ELit <$> lit
          <|> parens expr
          <|> Not <$> (op "!" *> expr)
 
+statement :: Parser Statement
+statement = statementNoLRec
+         <|> Seq <$> (statementNoLRec <* op ";")
+                 <*> lexeme statement
+
+statementNoLRec :: Parser Statement
+statementNoLRec
+   = If <$> (token "if"   *> lexeme expr) 
+        <*> (token "then" *> lexeme statement)
+        <*> (token "else" *> lexeme statement)
+        <* (token "endif")
+ <|> Assign <$> (var <* op ":=") <*> expr
+ <|> While <$> (token "while" *> lexeme expr) 
+           <*> statement
+           <* (token "endwhile")
