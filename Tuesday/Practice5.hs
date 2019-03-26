@@ -57,3 +57,5 @@ evalParser p = fmap fst
              . listToMaybe
              . filter (null . snd) 
              . runParser p 
+
+newtype F1 x a = F1 (x -> a) deriving (Functor)
