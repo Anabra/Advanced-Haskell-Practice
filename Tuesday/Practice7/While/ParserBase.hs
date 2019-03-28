@@ -102,8 +102,8 @@ lexeme :: Parser a -> Parser a
 lexeme p = p <* many ws
 
 between :: String -> String -> Parser a -> Parser a
-between before after p =
-  token before *> lexeme p <* token after
+between before after p = 
+  token before *> lexeme p <* token after 
 
 --between "asd" "qwe" digit -> "asd   5  qwe  "
 

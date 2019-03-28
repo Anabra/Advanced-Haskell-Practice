@@ -8,29 +8,21 @@ bool = token "true"  *> pure True
    <|> token "false" *> pure False
 
 lit :: Parser Lit
-lit = LBool <$> bool
-  <|> LInt <$> nat
-
-------------------------------- until this line ----------------------------------------------
-
+lit = LBool <$> lexeme bool
+  <|> LInt <$> lexeme nat
 
 identifier :: Parser String
 identifier = (:) <$> letter <*> many alphaNum
 
 var :: Parser Var
-var = Var <$> identifier
+var = Var <$> lexeme identifier
 
 op :: String -> Parser String
-op = token
+op s = token s
 
-exprNoLRec :: Parser Expr
-exprNoLRec = ELit <$> lit
-         <|> EVar <$> var
-         <|> parens expr
-         <|> Not <$> (op "!" *> expr)
 
 expr :: Parser Expr
-expr = exprNoLRec
+expr = lexeme exprNoLRec
    <|> Mul   <$> exprNoLRec <* op "*" <*> expr
    <|> Plus  <$> exprNoLRec <* op "+" <*> expr
    <|> Minus <$> exprNoLRec <* op "-" <*> expr
@@ -38,15 +30,24 @@ expr = exprNoLRec
    <|> Eq    <$> exprNoLRec <* op "==" <*> expr
    <|> LEq   <$> exprNoLRec <* op "<=" <*> expr
 
-statementNoLRec :: Parser Statement
-statementNoLRec = 
-   Assign <$> (lexeme var <* op ":=") <*> lexeme expr
-   <|> If <$> lexeme (op "if" *> expr)
-          <*> lexeme (op "then" *> statement)
-          <*> lexeme (op "else" *> statement)
-          <* op "endif"
+exprNoLRec :: Parser Expr
+exprNoLRec = ELit <$> lit
+         <|> EVar <$> var
+         <|> parens expr
+         <|> Not <$> (op "!" *> expr)
 
-statement :: Parser Statement 
-statement = statementNoLRec <|>
-   Seq <$> (statementNoLRec <* op ";")
-       <*> statement
+statement :: Parser Statement
+statement = statementNoLRec
+         <|> Seq <$> (statementNoLRec <* op ";")
+                 <*> lexeme statement
+
+statementNoLRec :: Parser Statement
+statementNoLRec
+   = If <$> (token "if"   *> lexeme expr)
+        <*> statement
+        <*> (token "else" *> lexeme statement)
+        <*  (token "endif")
+   <|> Assign <$> (var <* op ":=") <*> expr
+   <|> While <$> (token "while" *> lexeme expr)
+             <*> statement
+             <*  (token "endwhile")
