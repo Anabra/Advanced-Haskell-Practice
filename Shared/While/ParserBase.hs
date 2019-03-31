@@ -48,6 +48,11 @@ instance Alternative Parser where
   many :: Parser a -> Parser [a]
   many p = some p <|> pure []
 
+infixl 3 <||>
+(<||>) :: Parser a -> Parser a -> Parser a
+(<||>) (P p) (P q) = P $ \s -> let r = p s in
+    if null r then q s else r
+
 char :: Char -> Parser Char
 char c = matches (== c)
 

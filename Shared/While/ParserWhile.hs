@@ -1,5 +1,8 @@
 module ParserWhile where
 
+import Data.Function (on)
+
+import Util
 import Syntax
 import ParserBase
 
@@ -23,18 +26,13 @@ op s = token s
 
 expr :: Parser Expr
 expr = lexeme exprNoLRec
-   <|> Mul   <$> exprNoLRec <* op "*" <*> expr
-   <|> Plus  <$> exprNoLRec <* op "+" <*> expr
-   <|> Minus <$> exprNoLRec <* op "-" <*> expr
-   <|> And   <$> exprNoLRec <* op "&&" <*> expr
-   <|> Eq    <$> exprNoLRec <* op "==" <*> expr
-   <|> LEq   <$> exprNoLRec <* op "<=" <*> expr
+   <|> reorderExprChain <$> exprChainE
 
 exprNoLRec :: Parser Expr
 exprNoLRec = ELit <$> lit
-         <|> EVar <$> var
-         <|> parens expr
-         <|> Not <$> (op "!" *> expr)
+        <||> EVar <$> var
+        <||> parens expr
+        <||> Not <$> (op "!" *> expr)
 
 statement :: Parser Statement
 statement = statementNoLRec
@@ -47,7 +45,43 @@ statementNoLRec
         <*> statement
         <*> (token "else" *> lexeme statement)
         <*  (token "endif")
-   <|> Assign <$> (var <* op ":=") <*> expr
-   <|> While <$> (token "while" *> lexeme expr)
+   <||> Assign <$> (var <* op ":=") <*> expr
+   <||> While <$> (token "while" *> lexeme expr)
              <*> statement
              <*  (token "endwhile")
+
+operator :: Parser Operator
+operator = op "*" *> pure OpMul
+      <||> op "+" *> pure OpPlus
+      <||> op "-" *> pure OpMinus
+      <||> op "&&" *> pure OpAnd
+      <||> op "==" *> pure OpEq
+      <||> op "<=" *> pure OpLEq
+
+-- won't allow zero-length expression chains
+exprChainE :: Parser (AltList Expr Operator)
+exprChainE = ACons <$> exprNoLRec <*> exprChainO
+
+exprChainO :: Parser (AltList Operator Expr)
+exprChainO = ACons <$> operator <*> exprChainE
+        <||> pure Nil
+
+reorderExprChainE :: AltList Expr Operator -> Expr
+reorderExprChainE (ACons e Nil) = e
+reorderExprChainE (ACons e xs) = reorderExprChainO xs e
+
+reorderExprChainO :: AltList Operator Expr -> Expr -> Expr
+reorderExprChainO (ACons op xs) e = ap op e (reorderExprChainE xs)
+
+reorderExprChain :: AltList Expr Operator -> Expr
+reorderExprChain Nil = error "Should not have come here"
+reorderExprChain xs@(ACons e Nil) = e
+reorderExprChain xs
+  | pos <- maxPosBy (compare `on` precedence) xs
+  , ys <- applyAtPos pos xs
+  = reorderExprChain ys
+
+applyAtPos :: Int -> AltList Expr Operator -> AltList Expr Operator
+applyAtPos 0 (ACons lhs (ACons op (ACons rhs xs))) = ACons (ap op lhs rhs) xs
+applyAtPos n (ACons lhs (ACons op xs)) = (ACons lhs (ACons op (applyAtPos (n-2) xs)))
+applyAtPos _ xs = xs
