@@ -1,8 +1,9 @@
 module Interpreter where
 
 import Control.Monad.Identity
-import Control.Monad.State
+import Control.Monad.Trans.State
 import Control.Monad.Trans.Except
+import Control.Monad.Error.Class
 import Data.Map (Map(..))
 import qualified Data.Map as Map
 
@@ -49,28 +50,28 @@ stateAddPlusOne = do
 -}
 
 evalVar :: Var -> Eval RTVal
-evalVar v = do 
+evalVar v = do
   vars <- get
   let mVal = Map.lookup v vars
-  case mVal of 
-    Just val -> return val 
-    Nothing  -> lift $ throwE $ "Undefined variable: " ++ show v
+  case mVal of
+    Just val -> return val
+    Nothing  -> throwError $ "Undefined variable: " ++ show v
 
 evalExpr :: Expr -> Eval RTVal
-evalExpr (Plus lhs rhs) = do 
-  lVal <- evalExpr lhs 
+evalExpr (Plus lhs rhs) = do
+  lVal <- evalExpr lhs
   rVal <- evalExpr rhs
-  case (lVal, rVal) of 
+  case (lVal, rVal) of
     (RTLit (LInt n), RTLit (LInt m)) -> return $ RTLit (LInt $ n + m)
-    _ -> lift $ throwE "Type mismatch"
+    _ -> throwError "Type mismatch"
 
 evalWhile :: Statement -> Eval ()
-evalWhile (Assign v expr) = do 
+evalWhile (Assign v expr) = do
   val <- evalExpr expr
   vars <- get
   let vars' = Map.insert v val vars
   put vars'
-evalWhile (Seq p q) = do 
+evalWhile (Seq p q) = do
   evalWhile p
   evalWhile q
 
@@ -78,7 +79,7 @@ evalWhile (Seq p q) = do
 data Identity a = Identity a
 State s a ~ StateT s Identity a
 
-get :: StateT s m s 
+get :: StateT s m s
 put :: s -> StateT s m ()
 
 throwE :: e -> ExceptT e m a
@@ -87,10 +88,10 @@ catchE :: (e -> ExceptT e' m a) -> ExceptT e' m a
 class MonadTrans (t :: * -> * -> *) where
   lift :: Monad m => m a -> t m a
 
-  ExceptT e Id a -> StateT s (ExceptT e Id) a 
+  ExceptT e Id a -> StateT s (ExceptT e Id) a
 
 -- throwE :: e -> m' e a
-class MonadExcept (t (m' e) :: * -> *) where 
+class MonadExcept (t (m' e) :: * -> *) where
   throwE :: ( MonadExcept (m' e)
             , MonadTrans t
             ) => e -> t (m' e) a
