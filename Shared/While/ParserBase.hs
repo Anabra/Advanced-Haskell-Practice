@@ -1,13 +1,15 @@
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE InstanceSigs, LambdaCase #-}
 module ParserBase
   ( module ParserBase
   , module Control.Applicative
   ) where
 
-import Data.Char
-import Data.List
-import Data.Maybe
-import Control.Applicative
+import Control.Applicative (Alternative(..)) 
+import Control.Monad (MonadPlus(..), mfilter, (>>))
+import Data.Char (digitToInt, isAlpha, isAlphaNum, isDigit, isSpace)
+import Data.Foldable (foldl')
+import Data.Functor (($>))
+import Data.Maybe (listToMaybe)
 
 newtype Parser a = P { runParser :: String -> [(a, String)] }
 
@@ -32,7 +34,7 @@ instance Applicative Parser where
   (*>) q p = (\_ y -> y) <$> q <*> p
 
   (<*) :: Parser a -> Parser b -> Parser a
-  (<*) q p = (\x _ -> x) <$> q <*> p
+  (<*) q p = const <$> q <*> p
 
 -- monoid on applicative functors
 instance Alternative Parser where
@@ -48,6 +50,12 @@ instance Alternative Parser where
   many :: Parser a -> Parser [a]
   many p = some p <|> pure []
 
+instance Monad Parser where
+  (>>=) :: Parser a -> (a -> Parser b) -> Parser b
+  (>>=) (P p) f = P $ \s -> [(b, s'') | (a, s') <- p s, (b, s'') <- runParser (f a) s']
+
+instance MonadPlus Parser where
+
 infixl 3 <||>
 (<||>) :: Parser a -> Parser a -> Parser a
 (<||>) (P p) (P q) = P $ \s -> let r = p s in
@@ -57,13 +65,20 @@ char :: Char -> Parser Char
 char c = matches (== c)
 
 anyChar :: Parser Char
-anyChar = matches (const True)
+anyChar = P $ \case
+    []     -> empty
+    (c:cs) -> pure (c,cs)
+
+peek :: Parser Char
+peek = P $ \case
+    []     -> empty
+    (c:cs) -> pure (c,c:cs)
 
 matches :: (Char -> Bool) -> Parser Char
-matches p = P $ \s ->
-  case s of
-    (x:xs) | p x -> [(x,xs)]
-    _ -> []
+matches p = anyChar >>= (mfilter p . pure)
+
+untilC :: (Char -> Bool) -> Parser String
+untilC p = P (pure . span p)
 
 digitC :: Parser Char
 digitC = matches isDigit
@@ -89,28 +104,29 @@ list p = char '[' *> (((:) <$> p <*> list') <|> pure []) <* char ']' where
 
 -- motivation 2 for Applicative
 token' :: String -> Parser String
-token' (c:cs) = (:) <$> char c <*> token' cs
-token' []     = pure ""
+token' = foldr (\ c -> (<*>) ((:) <$> char c)) (pure "")
 
 token :: String -> Parser String
 token s = lexeme (token' s)
 
 nat :: Parser Int
-nat = foldl' (\acc cur -> acc*10 + cur) 0 <$> some digit
+nat = foldl' (\i c -> i * 10 + digitToInt c) 0 <$> untilC isDigit
 
 -- parse one whitespace
 ws :: Parser ()
-ws = matches isSpace *> pure ()
+ws = matches isSpace $> ()
 
 -- parse that p parses then all whitespaces
 lexeme :: Parser a -> Parser a
-lexeme p = p <* many ws
+lexeme p = p <* untilC isSpace
 
 between :: String -> String -> Parser a -> Parser a
-between before after p =
-  token before *> lexeme p <* token after
+between before after p = do
+  token before 
+  a <- lexeme p
+  token after
+  return a
 
 --between "asd" "qwe" digit -> "asd   5  qwe  "
-
 parens :: Parser a -> Parser a
 parens = between "(" ")"

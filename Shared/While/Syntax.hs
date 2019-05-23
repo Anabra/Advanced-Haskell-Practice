@@ -1,5 +1,7 @@
 module Syntax where
 
+import Prelude hiding (LT)
+
 data Lit
   = LBool Bool
   | LInt Int
@@ -22,6 +24,7 @@ data Expr
   | And Expr Expr
   | Eq Expr Expr
   | LEq Expr Expr
+  | LT Expr Expr
   | Not Expr
   deriving (Eq, Ord, Show)
 

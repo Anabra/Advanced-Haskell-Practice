@@ -1,11 +1,13 @@
 module Util where
 
-import Data.List
+import Data.Foldable (maximumBy)
 import Data.Function (on)
+
+import Prelude hiding (LT)
 
 import Syntax
 
-data Operator = OpMul | OpPlus | OpMinus | OpAnd | OpEq | OpLEq
+data Operator = OpMul | OpPlus | OpMinus | OpAnd | OpEq | OpLEq | OpLT
   deriving (Eq, Ord, Show)
 
 precedence :: Operator -> Int
@@ -15,6 +17,7 @@ precedence OpMinus = 6
 precedence OpAnd   = 3
 precedence OpEq    = 4
 precedence OpLEq   = 4
+precedence OpLT    = 4
 
 ap :: Operator -> Expr -> Expr -> Expr
 ap OpMul   = Mul
@@ -23,6 +26,7 @@ ap OpMinus = Minus
 ap OpAnd   = And
 ap OpEq    = Eq
 ap OpLEq   = LEq
+ap OpLT    = LT
 
 data AltList a b = ACons a (AltList b a) | Nil
   deriving (Eq, Ord, Show)
