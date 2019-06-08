@@ -53,6 +53,15 @@ infixl 3 <||>
 (<||>) (P p) (P q) = P $ \s -> let r = p s in
     if null r then q s else r
 
+-- applictive constraint
+instance Monad Parser where
+  return :: a -> Parser a
+  return = pure
+
+  (>>=) :: Parser a -> (a -> Parser b) -> Parser b
+  (>>=) (P p) g = P $ \s ->
+    concat [ runParser (g x) s' | (x,s') <- p s ]
+
 char :: Char -> Parser Char
 char c = matches (== c)
 
@@ -114,3 +123,22 @@ between before after p =
 
 parens :: Parser a -> Parser a
 parens = between "(" ")"
+
+-- run parser p n times
+times :: Int -> Parser a -> Parser [a]
+times 0 p = pure []
+times n p = (:) <$> p <*> times (n-1) p
+
+-- times 3 digit "123" -> Just [1,2,3]
+-- times 3 anyChar "abc" -> Just ['a','b','c']
+-- times 3 digit "12" -> Nothing (cannot parse anything)
+-- times 2 digit "123" -> ([1,2], "3")
+-- times 0 digit "" -> Just []
+-- times 0 digit "asd" -> ([],"asd")
+
+nCoords :: Parser [(Int,Int)]
+nCoords = lexeme nat >>= (\n -> n `times` lexeme (tuple nat nat))
+
+-- nCoords "2(12,3)(3,12)" -> Just [(12,3), (3,12)]
+-- nCoords "2 (12,3) (3,12)" -> Just [(12,3), (3,12)]
+-- nCoords "2\n(12,3)\n(3,12)" -> Just [(12,3), (3,12)]
